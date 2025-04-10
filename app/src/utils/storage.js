@@ -171,7 +171,7 @@ export const getAllTracks = async () => {
         if (!response.ok) {
             // Try to get error message from response body if possible
             let errorBody = null;
-            try { errorBody = await response.json(); } catch (e) { /* ignore parse error */ }
+            try { errorBody = await response.json(); } catch (e) { }
             const statusText = response.statusText || 'Unknown Status';
             const errorMessage = errorBody?.message || `HTTP error! Status: ${response.status} (${statusText})`;
             throw new Error(errorMessage);
@@ -270,9 +270,9 @@ export const debugUserProgress = async () => {
 export const clearUserData = async () => {
     try {
         await AsyncStorage.removeItem(USER_PROGRESS_KEY);
-        await AsyncStorage.removeItem(USER_COINS_KEY);
-        await AsyncStorage.removeItem(USER_CREATED_TRACKS_KEY);
-        allTracksCache = null;
+        // await AsyncStorage.removeItem(USER_COINS_KEY);
+        // await AsyncStorage.removeItem(USER_CREATED_TRACKS_KEY);
+        // allTracksCache = null;
         console.log('User progress, coins, and cached user tracks cleared.');
     } catch (e) {
         console.error("Failed to clear user data:", e);

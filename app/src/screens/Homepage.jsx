@@ -18,7 +18,6 @@ import { useFocusEffect } from '@react-navigation/native';
 const screenWidth = Dimensions.get('window').width;
 
 const ProgressBar = ({ progress }) => {
-    // ... (keep existing implementation)
     const progressWidth = Math.max(0, Math.min(100, progress * 100));
     return (
         <View style={styles.progressBarBackground}>
@@ -28,12 +27,15 @@ const ProgressBar = ({ progress }) => {
 };
 
 const Homepage = ({ navigation }) => {
+      
     const [userProgress, setUserProgress] = useState({});
     const [allTracks, setAllTracks] = useState([]); // State to hold combined tracks
     const [isLoading, setIsLoading] = useState(true); // Loading state for tracks
     const [error, setError] = useState(null); // Error state
     const [isRefreshing, setIsRefreshing] = useState(false); // State for pull-to-refresh
 
+    Text.defaultProps = Text.defaultProps || {};
+    Text.defaultProps.style = { fontFamily: 'NunitoSans-Regular' };   
 
     // Function to fetch all data (tracks and progress)
     const fetchData = async (showLoadingIndicator = true) => {
@@ -50,8 +52,6 @@ const Homepage = ({ navigation }) => {
             console.log("Homepage - Progress loaded:", progress);
             setUserProgress(progress);
 
-            // Debug - Log complete user progress when page loads/refreshes
-            // await debugUserProgress();
 
         } catch (err) {
             console.error("Homepage - Error fetching data:", err);

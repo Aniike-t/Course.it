@@ -17,11 +17,9 @@ import PersonalTrackPage from './src/screens/PersonalTrackPage.jsx'
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator(); // Create Tab navigator instance
 
-
 function HomeStackNavigator() {
   return (
     <Stack.Navigator
-
       screenOptions={{
         headerShown: false,
         cardStyleInterpolator: ({ current, layouts }) => {
@@ -30,8 +28,7 @@ function HomeStackNavigator() {
               backgroundColor: '#FBF7F0',
               transform: [
                 {
-                  
-                  translateX: current.progress.interpolate({
+                    translateX: current.progress.interpolate({
                     inputRange: [0, 1],
                     outputRange: [layouts.screen.width, 0],
                   }),
@@ -83,7 +80,7 @@ export default function App() {
             height: 40,
           },
           tabBarLabelStyle: {
-            fontSize: 6,
+            fontSize: 0,
           },
         })}
       >
