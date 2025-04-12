@@ -196,7 +196,7 @@ const ProfilePage = () => {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container}>
         {/* Title */}
-        <Text style={styles.pageTitle}>Your Profile</Text>
+        <Text style={styles.pageTitle}>Your Profile Name</Text>
 
         {/* Stats Section */}
         <View style={styles.section}>
@@ -268,18 +268,18 @@ const styles = StyleSheet.create({
       color: '#555',
   },
   pageTitle: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 25,
-    marginTop: 10,
-    textAlign: 'center',
+    marginBottom: 10,
+    marginTop: 15,
+    textAlign: 'left',
   },
   section: {
     borderWidth: 3,
     borderRadius: 12,
     borderColor: '#2c2c2c',
-    marginBottom: 30,
+    marginBottom: 15,
     backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 15,
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     color: '#2c3e50',
-    marginBottom: 15,
+    marginBottom: 10,
     paddingBottom: 5,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderColor: '#4a4a4a',
     alignItems: 'center',
-    width: '45%', // Approximately two columns
+    width: '45%',
     marginBottom: 20,
     paddingVertical: 10,
   },
