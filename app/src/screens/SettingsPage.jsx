@@ -64,7 +64,7 @@ const SettingsPage = ({ navigation }) => {
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>Clear Data</Text>
                         <Text style={styles.modalMessage}>
-                            Are you sure you want to clear all user progress and coins? This action cannot be undone.
+                            Are you sure you want to clear all user progress, tracks and coins? This action cannot be undone.
                         </Text>
                         <View style={styles.modalButtonContainer}>
                             <TouchableOpacity
@@ -83,11 +83,19 @@ const SettingsPage = ({ navigation }) => {
                     </View>
                 </View>
             </Modal>
+            <Text style={styles.AboutText}>Made by Aniket V Mahajan</Text>
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
+    AboutText:{
+        fontSize: 10,
+        color: '#545454',
+        textAlign: 'center',
+        marginTop: 10,
+        marginBottom:10
+    },
     safeArea: {
         flex: 1,
         backgroundColor: '#FBF7F0',
@@ -148,22 +156,23 @@ const styles = StyleSheet.create({
         marginBottom: 15,
     },
     modalMessage: {
-        fontSize: 16,
-        textAlign: 'center',
-        marginBottom: 30,
+        fontSize: 12,
+        textAlign: 'justify',
+        marginBottom: 15,
         lineHeight: 22,
     },
     modalButtonContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         width: '100%',
+        gap: 10,
     },
     modalButton: {
+        width:'100%',
         borderRadius: 8,
         paddingVertical: 12,
         paddingHorizontal: 20,
         flex: 1,
-        marginHorizontal: 10,
         alignItems: 'center',
     },
     modalButtonText: {

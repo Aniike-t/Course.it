@@ -20,8 +20,9 @@ import {
 } from '../utils/storage';
 
 
-const API_BASE_URL = 'http://127.0.0.1:5000'; 
+const API_BASE_URL = 'https://courseitbackend.vercel.app'; 
 const TRACK_CREATION_COST = 30; 
+const PVT_KEY = 'aniketvm1104'   // This will be replaced when user signin signup works with token
 
 const PersonalTrackPage = ({ navigation }) => {
   const [trackName, setTrackName] = useState('');
@@ -32,7 +33,7 @@ const PersonalTrackPage = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [userCoins, setUserCoins] = useState(0); 
   const [coinsLoaded, setCoinsLoaded] = useState(false); 
-
+  
   
   useEffect(() => {
     const fetchCoins = async () => {
@@ -79,7 +80,8 @@ const PersonalTrackPage = ({ navigation }) => {
 
     const requestData = {
       track_name: trackName, description, difficulty, timeframe,
-      num_checkpoints: numCheckpoints
+      num_checkpoints: numCheckpoints,
+      PVT_KEY: PVT_KEY
     };
 
     setIsLoading(true);
@@ -175,7 +177,16 @@ const PersonalTrackPage = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} disabled={isLoading}>
+        <TouchableOpacity
+            onPress={() => {
+              console.log('Back button pressed! isLoading:', isLoading); 
+              if (!isLoading) { 
+                  navigation.goBack();
+              }
+            }}
+            style={styles.backButton}
+            disabled={isLoading}
+          >
             <Ionicons name="arrow-back" size={28} color={isLoading ? "#ccc" : "#333"} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Create Track</Text>
@@ -304,7 +315,7 @@ const styles = StyleSheet.create({
     color: '#050202',
     flex: 1, // Allow title to take up space
     textAlign: 'center', // Center title
-    marginLeft: -38, // Adjust to visually center with back button offset
+    // marginLeft: -38, // Adjust to visually center with back button offset
   },
   coinDisplay: {
       fontSize: 16,
@@ -369,6 +380,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', // Center items
   },
   costText: {
+    textAlign:'left',
+    alignSelf:'left',
       fontSize: 15,
       fontWeight: '500',
       color: '#666',

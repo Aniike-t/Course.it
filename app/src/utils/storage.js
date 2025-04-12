@@ -6,7 +6,7 @@ import { tracksData as bundledTracksData } from '../data/data.js';
 const USER_PROGRESS_KEY = '@userProgress';
 const USER_COINS_KEY = '@userCoins';
 const USER_CREATED_TRACKS_KEY = '@userCreatedTracks'; // Key for cached user tracks
-const API_BASE_URL = 'http://127.0.0.1:5000';
+const API_BASE_URL = 'https://courseitbackend.vercel.app';
 
 // --- Helper Function for API calls ---
 const fetchWithTimeout = async (url, options = {}, timeout = 8000) => {
@@ -163,46 +163,56 @@ export const getAllTracks = async () => {
     console.log("getAllTracks called");
     let userTracks = [];
 
+    // --- Backend Fetch Disabled ---
+    // try {
+    //     console.log("Attempting to fetch user tracks from server...");
+    //     const response = await fetchWithTimeout(`${API_BASE_URL}/get_user_tracks`);
+    //     console.log(response)
+
+    //     if (!response.ok) {
+    //         let errorBody = null;
+    //         try { errorBody = await response.json(); } catch (e) { }
+    //         const statusText = response.statusText || 'Unknown Status';
+    //         const errorMessage = errorBody?.message || `HTTP error! Status: ${response.status} (${statusText})`;
+    //         throw new Error(errorMessage);
+    //     }
+    //     const serverTracks = await response.json();
+    //     console.log(`Successfully fetched ${serverTracks.length} tracks from server.`);
+
+    //     if (Array.isArray(serverTracks)) {
+    //         userTracks = serverTracks;
+    //         console.log(serverTracks)
+    //         await saveUserCreatedTracks(userTracks); // Update local cache
+    //     } else {
+    //         console.error("Server response is not an array:", serverTracks);
+    //         // Fallback to cache will happen in catch block or after this try
+    //     }
+
+    // } catch (error) {
+    //     console.error("Failed to fetch tracks from server:", error.message); // Log the specific error
+    //     // Fallback: Try loading from local cache if server fetch failed
+    //     console.log("Falling back to loading user tracks from cache...");
+    //     try {
+    //         userTracks = await loadUserCreatedTracks();
+    //         console.log(`Loaded ${userTracks.length} tracks from cache.`);
+    //     } catch (cacheError) {
+    //         console.error("Failed to load tracks from cache as well:", cacheError);
+    //         userTracks = []; // Ensure userTracks is an empty array if cache fails too
+    //     }
+    // }
+    // --- End Backend Fetch Disabled ---
+
+    // --- Always load from cache ---
+    console.log("Loading user tracks from cache...");
     try {
-        console.log("Attempting to fetch user tracks from server...");
-
-        // --------------------------There is some issue here combining cloud tracks so its turned off for now------------------------------------------
-
-        // const response = await fetchWithTimeout(`${API_BASE_URL}/get_user_tracks`);
-        // console.log(response)
-
-        // if (!response.ok) {
-        //     // Try to get error message from response body if possible
-        //     let errorBody = null;
-        //     try { errorBody = await response.json(); } catch (e) { }
-        //     const statusText = response.statusText || 'Unknown Status';
-        //     const errorMessage = errorBody?.message || `HTTP error! Status: ${response.status} (${statusText})`;
-        //     throw new Error(errorMessage);
-        // }
-        // const serverTracks = await response.json();
-        // console.log(`Successfully fetched ${serverTracks.length} tracks from server.`);
-
-        // if (Array.isArray(serverTracks)) {
-        //     userTracks = serverTracks;
-        //     console.log(serverTracks)
-        //     await saveUserCreatedTracks(userTracks); // Update local cache
-        // } else {
-        //     console.error("Server response is not an array:", serverTracks);
-        //     // Fallback to cache will happen in catch block or after this try
-        // }
-
-    } catch (error) {
-        console.error("Failed to fetch tracks from server:", error.message); // Log the specific error
-        // Fallback: Try loading from local cache if server fetch failed
-        console.log("Falling back to loading user tracks from cache...");
-        try {
-            userTracks = await loadUserCreatedTracks();
-            console.log(`Loaded ${userTracks.length} tracks from cache.`);
-        } catch (cacheError) {
-            console.error("Failed to load tracks from cache as well:", cacheError);
-            userTracks = []; // Ensure userTracks is an empty array if cache fails too
-        }
+        userTracks = await loadUserCreatedTracks();
+        console.log(`Loaded ${userTracks.length} tracks from cache.`);
+    } catch (cacheError) {
+        console.error("Failed to load tracks from cache:", cacheError);
+        userTracks = []; // Ensure userTracks is an empty array if cache fails
     }
+    // --- End Always load from cache ---
+
 
     // Merge predefined and user tracks.
     const combinedTracksMap = new Map();
@@ -217,7 +227,7 @@ export const getAllTracks = async () => {
         }
     });
 
-    // Add user tracks
+    // Add user tracks (loaded from cache)
     if (Array.isArray(userTracks)) {
         userTracks.forEach(track => {
             // Basic check for valid track structure
@@ -228,7 +238,7 @@ export const getAllTracks = async () => {
             }
         });
     } else {
-        console.error("User tracks data is not an array after fetch/cache attempt:", userTracks);
+        console.error("User tracks data is not an array after cache attempt:", userTracks);
     }
 
 
@@ -273,9 +283,9 @@ export const debugUserProgress = async () => {
 export const clearUserData = async () => {
     try {
         await AsyncStorage.removeItem(USER_PROGRESS_KEY);
-        // await AsyncStorage.removeItem(USER_COINS_KEY);
-        // await AsyncStorage.removeItem(USER_CREATED_TRACKS_KEY);
-        // allTracksCache = null;
+        await AsyncStorage.removeItem(USER_COINS_KEY);
+        await AsyncStorage.removeItem(USER_CREATED_TRACKS_KEY);
+        allTracksCache = null;
         console.log('User progress, coins, and cached user tracks cleared.');
     } catch (e) {
         console.error("Failed to clear user data:", e);

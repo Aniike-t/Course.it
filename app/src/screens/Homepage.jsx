@@ -210,11 +210,11 @@ const styles = StyleSheet.create({
     fontWeight: 500,
     color: '#333',
     marginHorizontal: 15,
-    marginTop: 10,
+    marginTop: 1,
   },
   safeArea: {
-        flex: 1,
-        backgroundColor: '#FBF7F0', // Match background
+    flex: 1,
+    backgroundColor: '#FBF7F0', // Match background
   },
   container: {
     flex: 1,

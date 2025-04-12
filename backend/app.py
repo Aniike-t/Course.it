@@ -135,7 +135,10 @@ def create_track():
     difficulty = data.get('difficulty')
     timeframe = data.get('timeframe')
     num_checkpoints = data.get('num_checkpoints')
-
+    pvt_key = data.get('PVT_KEY')
+    if pvt_key != os.environ.get('PVT_KEY'):
+        return jsonify({'message': 'Unauthorized access.'}), 401
+    
     if not all([track_name, description, difficulty, timeframe, num_checkpoints]):
          return jsonify({'message': 'Missing required fields.'}), 400
 
@@ -180,6 +183,10 @@ def get_user_tracks():
         print(f"Error fetching tracks from MongoDB: {e}")
         return jsonify({'message': 'Error fetching tracks.'}), 500
 
+
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({'message': 'Welcome to the Track Generator API!'}), 200
 
 if __name__ == '__main__':
   app.run(debug=True, host='0.0.0.0', port=5000) 

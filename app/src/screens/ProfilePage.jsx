@@ -293,13 +293,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     color: '#2c3e50',
-    marginBottom: 10,
+    marginBottom: 5,
     paddingBottom: 5,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
   statsGrid: {
-
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-around', // Distribute boxes
