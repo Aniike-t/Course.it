@@ -6,7 +6,7 @@ import { tracksData as bundledTracksData } from '../data/data.js';
 const USER_PROGRESS_KEY = '@userProgress';
 const USER_COINS_KEY = '@userCoins';
 const USER_CREATED_TRACKS_KEY = '@userCreatedTracks'; // Key for cached user tracks
-const API_BASE_URL = 'http://127.0.0.1:5000'; // **IMPORTANT: Replace**
+const API_BASE_URL = 'http://127.0.0.1:5000';
 
 // --- Helper Function for API calls ---
 const fetchWithTimeout = async (url, options = {}, timeout = 8000) => {
@@ -165,28 +165,31 @@ export const getAllTracks = async () => {
 
     try {
         console.log("Attempting to fetch user tracks from server...");
-        const response = await fetchWithTimeout(`${API_BASE_URL}/get_user_tracks`);
-        console.log(response)
 
-        if (!response.ok) {
-            // Try to get error message from response body if possible
-            let errorBody = null;
-            try { errorBody = await response.json(); } catch (e) { }
-            const statusText = response.statusText || 'Unknown Status';
-            const errorMessage = errorBody?.message || `HTTP error! Status: ${response.status} (${statusText})`;
-            throw new Error(errorMessage);
-        }
-        const serverTracks = await response.json();
-        console.log(`Successfully fetched ${serverTracks.length} tracks from server.`);
+        // --------------------------There is some issue here combining cloud tracks so its turned off for now------------------------------------------
 
-        if (Array.isArray(serverTracks)) {
-            userTracks = serverTracks;
-            console.log(serverTracks)
-            await saveUserCreatedTracks(userTracks); // Update local cache
-        } else {
-            console.error("Server response is not an array:", serverTracks);
-            // Fallback to cache will happen in catch block or after this try
-        }
+        // const response = await fetchWithTimeout(`${API_BASE_URL}/get_user_tracks`);
+        // console.log(response)
+
+        // if (!response.ok) {
+        //     // Try to get error message from response body if possible
+        //     let errorBody = null;
+        //     try { errorBody = await response.json(); } catch (e) { }
+        //     const statusText = response.statusText || 'Unknown Status';
+        //     const errorMessage = errorBody?.message || `HTTP error! Status: ${response.status} (${statusText})`;
+        //     throw new Error(errorMessage);
+        // }
+        // const serverTracks = await response.json();
+        // console.log(`Successfully fetched ${serverTracks.length} tracks from server.`);
+
+        // if (Array.isArray(serverTracks)) {
+        //     userTracks = serverTracks;
+        //     console.log(serverTracks)
+        //     await saveUserCreatedTracks(userTracks); // Update local cache
+        // } else {
+        //     console.error("Server response is not an array:", serverTracks);
+        //     // Fallback to cache will happen in catch block or after this try
+        // }
 
     } catch (error) {
         console.error("Failed to fetch tracks from server:", error.message); // Log the specific error

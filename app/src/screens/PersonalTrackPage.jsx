@@ -1,5 +1,5 @@
 // PersonalTrackPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Import useEffect
 import {
   View,
   Text,
@@ -9,13 +9,19 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  ActivityIndicator, // Import ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { loadUserCreatedTracks, saveUserCreatedTracks } from '../utils/storage'; // Import cache functions
+import {
+    loadUserCreatedTracks,
+    saveUserCreatedTracks,
+    loadUserCoins,
+    saveUserCoins 
+} from '../utils/storage';
 
-// **IMPORTANT: Use the same API_BASE_URL as defined in storage.js**
-const API_BASE_URL = 'http://127.0.0.1:5000'; // Replace if needed
+
+const API_BASE_URL = 'http://127.0.0.1:5000'; 
+const TRACK_CREATION_COST = 30; 
 
 const PersonalTrackPage = ({ navigation }) => {
   const [trackName, setTrackName] = useState('');
@@ -23,16 +29,41 @@ const PersonalTrackPage = ({ navigation }) => {
   const [difficulty, setDifficulty] = useState('Beginner');
   const [timeframe, setTimeframe] = useState('');
   const [checkpointsCount, setCheckpointsCount] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // Add loading state
+  const [isLoading, setIsLoading] = useState(false);
+  const [userCoins, setUserCoins] = useState(0); 
+  const [coinsLoaded, setCoinsLoaded] = useState(false); 
+
+  
+  useEffect(() => {
+    const fetchCoins = async () => {
+      try {
+        const coins = await loadUserCoins();
+        setUserCoins(coins);
+      } catch (error) {
+        console.error("Failed to load user coins:", error);
+        Alert.alert("Error", "Could not load your coin balance. Please try again later.");
+      } finally {
+          setCoinsLoaded(true); 
+      }
+    };
+    fetchCoins();
+  }, []); 
 
   const handleCreateTrack = async () => {
     console.log("PersonalTrackPage - Attempting to create track with:", {
-      trackName,
-      description,
-      difficulty,
-      timeframe,
-      checkpointsCount
+      trackName, description, difficulty, timeframe, checkpointsCount
     });
+
+    // --- Coin Check ---
+    if (!coinsLoaded) {
+        Alert.alert('Please wait', 'Loading your coin balance...');
+        return;
+    }
+    if (userCoins < TRACK_CREATION_COST) {
+      Alert.alert('Insufficient Funds', `You need ${TRACK_CREATION_COST} coins to create a track. You currently have ${userCoins}.`);
+      return;
+    }
+    // --- End Coin Check ---
 
     // Basic validation
     if (!trackName || !description || !timeframe || !checkpointsCount) {
@@ -41,60 +72,62 @@ const PersonalTrackPage = ({ navigation }) => {
     }
 
     const numCheckpoints = parseInt(checkpointsCount, 10);
-    if (isNaN(numCheckpoints) || numCheckpoints <= 0 || numCheckpoints > 20) { // Add upper limit?
+    if (isNaN(numCheckpoints) || numCheckpoints <= 0 || numCheckpoints > 20) {
       Alert.alert('Input Error', 'Number of checkpoints must be a valid number between 1 and 20.');
       return;
     }
 
-    // Construct the data to send to the Flask server
     const requestData = {
-      track_name: trackName,
-      description: description,
-      difficulty: difficulty,
-      timeframe: timeframe,
+      track_name: trackName, description, difficulty, timeframe,
       num_checkpoints: numCheckpoints
     };
 
-    setIsLoading(true); // Start loading indicator
+    setIsLoading(true);
+    const originalCoins = userCoins; 
+    let coinsDeducted = false;
 
     try {
+      // --- Deduct Coins ---
+      console.log(`Attempting to deduct ${TRACK_CREATION_COST} coins from ${originalCoins}`);
+      const newCoinTotal = originalCoins - TRACK_CREATION_COST;
+      await saveUserCoins(newCoinTotal);
+      setUserCoins(newCoinTotal); 
+      coinsDeducted = true;
+      console.log(`Coins deducted successfully. New balance: ${newCoinTotal}`);
+      // --- End Coin Deduction ---
+
       console.log(`Sending POST request to ${API_BASE_URL}/create_track`);
-      // Use fetchWithTimeout if desired, or standard fetch
-      const response = await fetch(`${API_BASE_URL}/create_track`, { // Use API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/create_track`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json', // Explicitly accept JSON
+          'Accept': 'application/json',
         },
         body: JSON.stringify(requestData),
       });
 
-      const responseBody = await response.text(); // Get raw response text first for debugging
+      const responseBody = await response.text();
       console.log('Raw response:', responseBody);
 
       let newTrackData;
       try {
-           newTrackData = JSON.parse(responseBody); // Try parsing the response
+           newTrackData = JSON.parse(responseBody);
       } catch (parseError) {
             console.error("JSON Parse Error:", parseError);
-            throw new Error(`Invalid JSON received from server: ${responseBody.substring(0, 100)}...`); // Show snippet
+            throw new Error(`Invalid JSON received from server: ${responseBody.substring(0, 100)}...`);
       }
-
 
       if (!response.ok) {
-          // Use message from server response if available, otherwise default
           const errorMessage = newTrackData?.message || `HTTP error! Status: ${response.status}`;
-          throw new Error(errorMessage);
+          throw new Error(errorMessage); // This will trigger the catch block for refund
       }
-
 
       console.log('PersonalTrackPage - Received track data from Flask:', newTrackData);
 
       // --- Cache the newly created track ---
-      if (newTrackData && newTrackData.id) { // Ensure we have valid track data with an ID
+      if (newTrackData && newTrackData.id) {
           console.log("Attempting to update local cache with new track...");
           const currentCachedTracks = await loadUserCreatedTracks();
-          // Check if track with same ID already exists (shouldn't due to unique ID generation)
           const trackExists = currentCachedTracks.some(track => track.id === newTrackData.id);
           if (!trackExists) {
               const updatedCachedTracks = [...currentCachedTracks, newTrackData];
@@ -105,20 +138,38 @@ const PersonalTrackPage = ({ navigation }) => {
           }
       } else {
           console.error("Received invalid track data from server, cannot cache.", newTrackData);
-          // Decide if this is a critical error or not
       }
       // --- End Caching ---
 
-      Alert.alert('Success', 'Track created successfully!');
+      Alert.alert('Success', `Track created successfully! ${TRACK_CREATION_COST} coins deducted.`);
       navigation.goBack(); // Return to homepage
 
     } catch (error) {
-      console.error('PersonalTrackPage - Error creating track:', error);
-      Alert.alert('Error', `Failed to create track: ${error.message}`);
+      console.error('PersonalTrackPage - Error during track creation process:', error);
+
+      // --- Attempt to Refund Coins if they were deducted ---
+      if (coinsDeducted) {
+          console.warn("Track creation failed after coins were deducted. Attempting refund...");
+          try {
+              await saveUserCoins(originalCoins); // Restore original coin amount
+              setUserCoins(originalCoins); // Update state back
+              console.log("Coins refunded successfully.");
+              Alert.alert('Error & Refund', `Failed to create track: ${error.message}. Your ${TRACK_CREATION_COST} coins have been refunded.`);
+          } catch (refundError) {
+              console.error("CRITICAL: Failed to refund coins after track creation failure:", refundError);
+              Alert.alert('Critical Error', `Failed to create track: ${error.message}. Additionally, failed to automatically refund coins. Please contact support.`);
+          }
+      } else {
+          Alert.alert('Error', `Failed to create track: ${error.message}`);
+      }
+      // --- End Refund Logic ---
+
     } finally {
-      setIsLoading(false); // Stop loading indicator regardless of outcome
+      setIsLoading(false); 
     }
   };
+
+  const isButtonDisabled = isLoading || !coinsLoaded || userCoins < TRACK_CREATION_COST;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -128,9 +179,11 @@ const PersonalTrackPage = ({ navigation }) => {
             <Ionicons name="arrow-back" size={28} color={isLoading ? "#ccc" : "#333"} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Create Track</Text>
+          <Text style={styles.coinDisplay}>💰 {coinsLoaded ? userCoins : '...'}</Text>
         </View>
 
-        <Text style={styles.label}>Track Name:</Text>
+        {/* Input fields remain the same */}
+         <Text style={styles.label}>Track Name:</Text>
         <TextInput
           style={styles.input}
           placeholder="e.g., Introduction to Python"
@@ -158,7 +211,7 @@ const PersonalTrackPage = ({ navigation }) => {
               style={[
                 styles.difficultyButton,
                 difficulty === level && styles.difficultyButtonActive,
-                isLoading && styles.disabledButton // Visually disable if loading
+                isLoading && styles.disabledButton 
               ]}
               onPress={() => !isLoading && setDifficulty(level)}
               disabled={isLoading}
@@ -190,17 +243,27 @@ const PersonalTrackPage = ({ navigation }) => {
           editable={!isLoading}
         />
 
-        <TouchableOpacity
-          style={[styles.createButton, isLoading && styles.disabledButton]} // Visually disable if loading
-          onPress={handleCreateTrack}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator size="small" color="#ffffff" />
-          ) : (
-            <Text style={styles.createButtonText}>Generate & Create Track</Text>
-          )}
-        </TouchableOpacity>
+
+        <View style={styles.createActionArea}>
+            <Text style={[styles.costText, isButtonDisabled && styles.costTextDisabled]}>
+                Cost: {TRACK_CREATION_COST} Coins
+            </Text>
+            <TouchableOpacity
+              style={[styles.createButton, isButtonDisabled && styles.disabledButton]}
+              onPress={handleCreateTrack}
+              disabled={isButtonDisabled}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Text style={styles.createButtonText}>Generate & Create Track</Text>
+              )}
+            </TouchableOpacity>
+            {!isLoading && !coinsLoaded && <Text style={styles.infoText}>Loading coin balance...</Text>}
+            {!isLoading && coinsLoaded && userCoins < TRACK_CREATION_COST && (
+                <Text style={styles.errorText}>Not enough coins!</Text>
+            )}
+        </View>
 
         <View style={{ height: 50 }} />
       </ScrollView>
@@ -208,6 +271,7 @@ const PersonalTrackPage = ({ navigation }) => {
   );
 };
 
+// --- Styles --- 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -221,79 +285,107 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 3,
     borderColor: '#333333',
-
     marginTop: 20,
     backgroundColor: '#ffffff',
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom:10,
+    marginBottom: 10,
     paddingVertical: 10,
     paddingHorizontal: 15,
-    
+    justifyContent: 'space-between', // To space out title and coins
   },
   backButton: {
     padding: 5,
-    marginRight: 15,
+    // Removed marginRight to let space-between work
   },
   headerTitle: {
-    fontSize: 20, // Slightly smaller
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#050202',
+    flex: 1, // Allow title to take up space
+    textAlign: 'center', // Center title
+    marginLeft: -38, // Adjust to visually center with back button offset
+  },
+  coinDisplay: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: '#DAA520', // Gold-like color
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 5,
+      backgroundColor: '#f0f0f0',
   },
   label: {
     fontSize: 16,
     fontWeight: '500',
     marginBottom: 3,
     color: '#444',
+    marginTop: 8, // Add some top margin to labels
   },
   input: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#ddd', // Lighter border
-    borderRadius: 8, // Slightly more rounded
+    borderColor: '#ddd',
+    borderRadius: 8,
     paddingHorizontal: 15,
-    paddingVertical: 12, // Adjust padding
-    marginBottom: 10, // More spacing
+    paddingVertical: 12,
+    marginBottom: 10,
     fontSize: 16,
     color: '#333',
   },
    textArea: {
-    minHeight: 80, // Ensure multiline has height
-    textAlignVertical: 'top', // Align text top in Android
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   difficultyContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between', // Space out buttons
+    justifyContent: 'space-between',
     marginBottom: 10,
   },
   difficultyButton: {
-    flex: 1, // Make buttons share space
-    marginHorizontal: 4, // Add small gap
-    borderWidth: 1, // Thinner border
+    flex: 1,
+    marginHorizontal: 4,
+    borderWidth: 1,
     borderColor: '#ccc',
-    backgroundColor: '#f8f8f8', // Lighter background
+    backgroundColor: '#f8f8f8',
     borderRadius: 8,
     paddingVertical: 12,
-    alignItems: 'center', // Center text horizontally
+    alignItems: 'center',
   },
   difficultyButtonActive: {
-    backgroundColor: '#3b3b3b', // Active color
+    backgroundColor: '#3b3b3b',
     borderColor: '#272727',
   },
   difficultyText: {
-    color: '#555', // Darker grey text
+    color: '#555',
     fontSize: 14,
     fontWeight: '500',
   },
   difficultyTextActive: {
-      color: '#ffffff', // White text on active
+      color: '#ffffff',
+  },
+  createActionArea: {
+    marginTop: 15, // Add space above cost text/button
+    alignItems: 'center', // Center items
+  },
+  costText: {
+      fontSize: 15,
+      fontWeight: '500',
+      color: '#666',
+      marginBottom: 8, // Space between cost text and button
+  },
+  costTextDisabled: {
+      color: '#aaa', // Dim the text if button is disabled
   },
   createButton: {
-    backgroundColor: '#414141', // Slightly different green
-    padding: 16, // Larger padding
+    backgroundColor: '#414141',
+    paddingVertical: 16,
+    paddingHorizontal: 30, // Give button some width
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 0, // Add some top margin
+    justifyContent: 'center', // Center spinner/text vertically
+    minHeight: 50, // Ensure consistent height with/without spinner
+    width: '100%', // Make button full width
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
@@ -305,11 +397,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  disabledButton: { // Style for disabled state
-      backgroundColor: '#bdc3c7', // Grey out background
+  disabledButton: {
+      backgroundColor: '#bdc3c7',
       borderColor: '#bdc3c7',
-      elevation: 0, // Remove shadow
+      elevation: 0,
       shadowOpacity: 0,
+  },
+  infoText: {
+      marginTop: 5,
+      fontSize: 13,
+      color: '#666',
+  },
+  errorText: {
+      marginTop: 5,
+      fontSize: 14,
+      color: '#c0392b', // Red color for errors
+      fontWeight: 'bold',
   }
 });
 

@@ -34,8 +34,8 @@ const Homepage = ({ navigation }) => {
     const [error, setError] = useState(null); // Error state
     const [isRefreshing, setIsRefreshing] = useState(false); // State for pull-to-refresh
 
-    Text.defaultProps = Text.defaultProps || {};
-    Text.defaultProps.style = { fontFamily: 'NunitoSans-Regular' };   
+    // Text.defaultProps = Text.defaultProps || {};
+    // Text.defaultProps.style = { fontFamily: 'NunitoSans-Regular' };   
 
     // Function to fetch all data (tracks and progress)
     const fetchData = async (showLoadingIndicator = true) => {
@@ -295,6 +295,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   createTrackContainer: {
+    backgroundColor: '#e0e0e0',
     border:'#2f2f2f0',
     borderRadius:12,
     borderWidth: 2,
@@ -313,7 +314,7 @@ const styles = StyleSheet.create({
   createTrackText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#3498db0',
+    color: '#0099ff0',
     marginLeft: 8,
   },
 });

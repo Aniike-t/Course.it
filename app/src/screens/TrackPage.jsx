@@ -14,15 +14,14 @@ import { Ionicons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import { useFocusEffect } from '@react-navigation/native';
 
-// Import getTrackById function instead of tracksData
 import { loadUserCoins, saveUserProgress, loadUserProgress, getTrackById } from "../utils/storage";
 
 // --- Constants (keep or adjust as needed) ---
-const CHECKPOINT_HEIGHT_ESTIMATE = 80; // Adjust as needed
-const CHECKPOINT_VERTICAL_MARGIN = 40; // Adjust as needed
+const CHECKPOINT_HEIGHT_ESTIMATE = 80; 
+const CHECKPOINT_VERTICAL_MARGIN = 40; 
 const HORIZONTAL_PADDING = 20;
-const CHECKPOINT_AREA_WIDTH_PERCENT = 45; // Percent of screen width for the checkpoint area
-const SCROLL_OFFSET = 100; // How far above the checkpoint to scroll
+const CHECKPOINT_AREA_WIDTH_PERCENT = 45;
+const SCROLL_OFFSET = 100; 
 
 const TrackPage = ({ route, navigation }) => {
     const { trackId, completedCheckpoints: initialCompletedCheckpoints } = route.params || {};
@@ -36,7 +35,6 @@ const TrackPage = ({ route, navigation }) => {
     const [track, setTrack] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Load track data using getTrackById
     useEffect(() => {
         async function loadTrackData() {
             if (!trackId) {

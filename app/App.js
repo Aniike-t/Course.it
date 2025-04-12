@@ -80,7 +80,7 @@ export default function App() {
             height: 40,
           },
           tabBarLabelStyle: {
-            fontSize: 0,
+            fontSize: 1,
           },
         })}
       >
