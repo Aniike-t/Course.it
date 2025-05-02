@@ -1,28 +1,38 @@
 {
   "expo": {
     "name": "Course.it",
-    "slug": "Course.it",
+    "slug": "Courseit",
     "version": "1.0.1",
     "orientation": "portrait",
-    "icon": "./assets/logo.png",
+    "icon": "./assets/newlogo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-logo.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#FFF7EC"
+      "image": "./assets/courseitlogo.png",
+      "resizeMode": "fit",
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/splash-logo.png",
-        "backgroundColor": "#FFF7EC"
-      }
+        "foregroundImage": "./assets/courseitlogo.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "package": "com.courseit"
     },
     "web": {
-      "favicon": "./assets/logo.png"
-    }
+      "favicon": "./assets/courseitlogo.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "5f52cd71-0136-489c-906c-908c40f4643e"
+      }
+    },
+    "owner": "aniketvm1104",
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }

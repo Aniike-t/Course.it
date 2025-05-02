@@ -7,6 +7,7 @@ const USER_PROGRESS_KEY = '@userProgress';
 const USER_COINS_KEY = '@userCoins';
 const USER_CREATED_TRACKS_KEY = '@userCreatedTracks'; // Key for cached user tracks
 const API_BASE_URL = 'https://courseitbackend.vercel.app';
+// const API_BASE_URL = 'http://127.0.0.1:5000'
 
 // --- Helper Function for API calls ---
 const fetchWithTimeout = async (url, options = {}, timeout = 8000) => {

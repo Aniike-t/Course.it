@@ -9,10 +9,19 @@ import {
     ScrollView,
     Alert,
     ActivityIndicator,
+    TextInput, // Import TextInput
+    KeyboardAvoidingView, // Import KeyboardAvoidingView
+    Platform, // Import Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import YoutubePlayer from 'react-native-youtube-iframe';
-import { addUserCoins, updateTrackProgress, loadUserProgress } from '../utils/storage';
+import { addUserCoins, updateTrackProgress, loadUserProgress } from '../utils/storage'; // Keep these
+import { styles } from './styles/StagePageStyles'; // Import styles from the new file
+
+// --- NEW API URL (adjust if your backend runs elsewhere) ---
+// Replace with your actual backend URL if deployed, otherwise use localhost for local testing
+const API_BASE_URL ='https://courseitbackend.vercel.app';
+// const API_BASE_URL = 'http://localhost:5000'; 
 
 const StagePage = ({ route, navigation }) => {
     const {
@@ -27,305 +36,337 @@ const StagePage = ({ route, navigation }) => {
         },
     } = route.params || {};
 
-    const [isCompleting, setIsCompleting] = useState(false);
+    // --- State Variables ---
+    const [isCompleting, setIsCompleting] = useState(false); // Keep for general loading state if needed (e.g., initial load)
     const [showCoinAnimation, setShowCoinAnimation] = useState(false);
-    const [isAlreadyCompleted, setIsAlreadyCompleted] = useState(false); // NEW State
+    const [coinAmountAnimated, setCoinAmountAnimated] = useState(0);
+    const [isAlreadyCompleted, setIsAlreadyCompleted] = useState(false);
 
+    // --- NEW Assessment State ---
+    const [userAnswer, setUserAnswer] = useState('');
+    const [isAssessing, setIsAssessing] = useState(false); // Specific state for assessment API call
+    const [assessmentFeedback, setAssessmentFeedback] = useState(null);
+    const [assessmentScore, setAssessmentScore] = useState(null);
+    const [assessmentStatus, setAssessmentStatus] = useState(null); // 'passed', 'failed', or null
+
+    // --- Constants ---
+    const PASSING_SCORE = 5;
+    // Generate the question using the checkpoint title
+    const assessmentQuestion = `Based on the content (title, description, outcomes) of this stage ("${checkpoint.title}"), briefly explain what you learned or a key takeaway.`;
+
+    // --- useEffect to check initial completion status ---
     useEffect(() => {
         const checkCompletionStatus = async () => {
+            // Reset assessment state when component loads or checkpoint changes
+            setUserAnswer('');
+            setAssessmentFeedback(null);
+            setAssessmentScore(null);
+            setAssessmentStatus(null);
+            setIsAssessing(false);
+            setShowCoinAnimation(false); // Ensure animation isn't stuck
+
             try {
                 const userProgress = await loadUserProgress();
+                // Ensure checkpointId is treated consistently (e.g., as number) for comparison
                 const progress = userProgress[trackId] || 0;
-                setIsAlreadyCompleted(progress >= checkpoint.checkpointId); // Check if *this* stage is completed
-                console.log(`StagePage - Stage ${checkpoint.checkpointId} completion status: ${isAlreadyCompleted}`);
+                const currentCheckpointId = Number(checkpoint.checkpointId); // Convert to number for safety
+                const completed = progress >= currentCheckpointId;
+                setIsAlreadyCompleted(completed);
+                console.log(`StagePage - Stage ${currentCheckpointId} initial completion status: ${completed} (Progress: ${progress})`);
             } catch (error) {
                 console.error("StagePage - Error loading user progress:", error);
+                // Handle error, maybe show a message or default to not completed
+                setIsAlreadyCompleted(false);
             }
         };
 
         checkCompletionStatus();
-    }, [trackId, checkpoint.checkpointId]);
+    }, [trackId, checkpoint.checkpointId]); // Rerun if track or checkpoint changes
 
-    const handleCompletePress = async () => {
-        if (isCompleting) {
-            console.log("StagePage - Complete button pressed while already completing. Ignoring.");
-            return;
-        }
-
-        console.log(`StagePage - Stage ${checkpoint.checkpointId} completion initiated.`);
-        setIsCompleting(true); // Set isCompleting to true *immediately*
-        setShowCoinAnimation(false);
-
-        try {
-            // Add coins
-            await addUserCoins(5);
-
-            // NEW: Update track progress - This is the key addition
-            await updateTrackProgress(trackId, checkpoint.checkpointId);
-
-            setShowCoinAnimation(true);
-
-            setTimeout(() => {
-                setShowCoinAnimation(false);
-                console.log(`StagePage - Setting params and navigating back for completion of ${checkpoint.checkpointId}`);
-
-                // Set params before navigating back
-                navigation.setParams({
-                    completedStageId: checkpoint.checkpointId,
-                    trackId: trackId
-                });
-
-                navigation.goBack(); // Use goBack
-
-            }, 1500);
-
-        } catch (error) {
-            console.error("StagePage - Error during completion process:", error);
-            Alert.alert("Error", "Something went wrong marking stage as complete.");
-            setIsCompleting(false); // Reset isCompleting on error
-        }
-    };
-
+    // --- Helper Function: Get Video ID ---
     const getVideoId = (url) => {
         if (!url) return null;
-        const regex = /(?:\?v=|\/embed\/|\.be\/|youtu\.be\/)([\w-]+)/;
+        // Regex to capture video ID from various YouTube URL formats
+        const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/;
         const match = url.match(regex);
-        return match ? match[1] : null;
+        if (match && match[1]) {
+            console.log("getVideoId - Extracted videoId:", match[1]);
+            return match[1];
+        }
+        console.warn("getVideoId - Could not extract videoId from URL:", url);
+        return null; // Return null if no match
     };
     const videoId = getVideoId(checkpoint.videoUrl);
 
+
+    // --- Handle Assessment Submission ---
+    const handleSubmitAnswer = async () => {
+        // Prevent submission if already assessing, or if the stage is somehow marked completed during the process, or if answer is empty
+        if (isAssessing || isAlreadyCompleted || !userAnswer.trim()) {
+            if (!userAnswer.trim()) Alert.alert("Input Required", "Please enter your answer.");
+            return;
+        }
+
+        console.log(`StagePage - Submitting answer for assessment: Stage ${checkpoint.checkpointId}`);
+        setIsAssessing(true);
+        setAssessmentFeedback(null); // Clear previous feedback
+        setAssessmentScore(null);
+        setAssessmentStatus(null);
+
+        try {
+            // Construct the request body
+            const requestBody = {
+                trackId: trackId,
+                checkpointId: checkpoint.checkpointId.toString(), // Ensure consistent type (string) if needed
+                userAnswer: userAnswer,
+            };
+            console.log("Sending to /assess_answer:", JSON.stringify(requestBody)); // Log payload
+
+            const response = await fetch(`${API_BASE_URL}/assess_answer`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify(requestBody),
+            });
+
+            // Log raw response for debugging
+            const responseText = await response.text();
+            console.log("Raw assessment response:", responseText);
+
+            let result;
+            try {
+                 result = JSON.parse(responseText); // Try parsing the logged text
+            } catch (parseError) {
+                 console.error("Failed to parse assessment response JSON:", parseError);
+                 throw new Error("Received invalid data from the assessment server.");
+            }
+
+
+            if (!response.ok) {
+                // Handle API errors (like 4xx, 5xx) using the parsed message if available
+                console.error("Assessment API Error Response:", result);
+                throw new Error(result.message || `Assessment request failed with status: ${response.status}`);
+            }
+
+            console.log("Parsed Assessment Result:", result);
+            // Safely access score and feedback
+            const score = result.score;
+            const feedback = result.feedback;
+
+             // Validate score type and range
+            if (typeof score !== 'number' || score < 0 || score > 10) {
+                console.error("Invalid score received:", score);
+                throw new Error("Received an invalid score from the assessment.");
+            }
+
+            setAssessmentScore(score);
+            setAssessmentFeedback(feedback || "No specific feedback provided."); // Provide default feedback if null/empty
+
+            // --- Handle Passing ---
+            if (score >= PASSING_SCORE) {
+                setAssessmentStatus('passed');
+                console.log(`StagePage - Assessment PASSED with score: ${score}`);
+
+                // Award coins & update progress
+                // Use try-catch for these critical updates as well
+                try {
+                    await addUserCoins(score); // Award score amount
+                    await updateTrackProgress(trackId, checkpoint.checkpointId);
+                    console.log(`Progress updated for track ${trackId} to ${checkpoint.checkpointId}`);
+                } catch (updateError) {
+                     console.error("Error updating progress/coins after passing:", updateError);
+                     // Decide how to handle this - maybe alert user? For now, log it.
+                     // Assessment UI will still show passed, but backend state might be inconsistent.
+                }
+
+
+                // Trigger animation and navigate back
+                setCoinAmountAnimated(score); // Set amount for animation text
+                setShowCoinAnimation(true);
+                setIsAlreadyCompleted(true); // Update UI immediately to reflect completion
+
+                // Delay navigation slightly longer
+                setTimeout(() => {
+                    setShowCoinAnimation(false);
+                    console.log(`StagePage - Navigating back after passing assessment for ${checkpoint.checkpointId}`);
+                    navigation.setParams({ // Send completion info back to TrackPage
+                        completedStageId: checkpoint.checkpointId,
+                        trackId: trackId
+                    });
+                    navigation.goBack();
+                }, 2000); // Extended timeout
+
+            // --- Handle Failing ---
+            } else {
+                setAssessmentStatus('failed');
+                console.log(`StagePage - Assessment FAILED with score: ${score}`);
+                // Keep the user's answer in the input field to allow editing
+                Alert.alert("Try Again", `Your score: ${score}/10. ${feedback || 'Please review the stage content and refine your answer.'}`);
+            }
+
+        } catch (error) {
+            console.error("StagePage - Error during assessment submission process:", error);
+            // Provide more specific error message to user if possible
+            Alert.alert("Assessment Error", `Could not assess answer: ${error.message}`);
+            setAssessmentFeedback("An error occurred during assessment. Please check your connection and try again."); // Show generic feedback on error
+            setAssessmentStatus('failed'); // Treat error as failure for UI flow
+        } finally {
+            setIsAssessing(false); // Stop loading indicator
+        }
+    };
+
+
+    // --- Render Logic ---
     return (
         <SafeAreaView style={styles.safeArea}>
-            <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    style={styles.backButton}
-                    disabled={isCompleting}
-                >
-                    <Ionicons name="arrow-back" size={28} color={isCompleting ? "#ccc" : "#444"} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle} numberOfLines={1}>
-                    Stage {checkpoint.checkpointId}
-                </Text>
-                <View style={{ width: 38 }} />
-            </View>
-
-            <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-                <Text style={styles.stageTitle}>{checkpoint.title}</Text>
-
-                {checkpoint.creatorName && (
-                    <Text style={styles.creatorText}>by {checkpoint.creatorName}</Text>
-                )}
-
-                {videoId ? (
-                    <View style={styles.videoContainer}>
-                        <YoutubePlayer
-                            height={220}
-                            play={false}
-                            videoId={videoId}
-                            webViewStyle={{ opacity: 0.99 }}
-                        />
-                    </View>
-                ) : (
-                    <View style={styles.videoPlaceholder}>
-                        <Ionicons name="play-circle-outline" size={60} color="#cccccc" />
-                        <Text style={styles.videoPlaceholderText}>(Video Not Available)</Text>
-                    </View>
-                )}
-
-                {checkpoint.description && (
-                    <Text style={styles.descriptionText}>{checkpoint.description}</Text>
-                )}
-
-                {checkpoint.outcomes && checkpoint.outcomes.length > 0 && (
-                    <View style={styles.outcomesContainer}>
-                        <Text style={styles.outcomesTitle}>Learning Outcomes:</Text>
-                        {checkpoint.outcomes.map((outcome, index) => (
-                            <View key={index} style={styles.outcomeItemContainer}>
-                                <Text style={styles.outcomeBullet}>{'\u2022'}</Text>
-                                <Text style={styles.outcomeText}>{outcome}</Text>
-                            </View>
-                        ))}
-                    </View>
-                )}
-
-                <View style={{ height: 40 }} />
-                <TouchableOpacity
-                    style={[styles.completeButton, (isCompleting || isAlreadyCompleted) && styles.completeButtonDisabled]}
-                    onPress={handleCompletePress}
-                    disabled={isCompleting || isAlreadyCompleted} // Disable if already completed
-                >
-                    {isCompleting && !showCoinAnimation ? (
-                        <ActivityIndicator size="small" color="#ffffff" />
-                    ) : (
-                        <Text style={styles.completeButtonText}>
-                            {isAlreadyCompleted ? 'Already Completed' : 'Mark Stage as Complete'}
-                        </Text>
-                    )}
-                </TouchableOpacity>
-                <View style={{ height: 20 }} />
-            </ScrollView>
-
-            {showCoinAnimation && (
-                <View style={styles.coinAnimationContainer}>
-                    <Text style={styles.coinAnimationText}>+5 🪙</Text>
+             <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={{ flex: 1 }}
+                // Adjust offset based on your header height or other elements
+                keyboardVerticalOffset={Platform.OS === "ios" ? 70 : 90}
+            >
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity
+                        onPress={() => navigation.goBack()}
+                        style={styles.backButton}
+                        // Disable back button while assessing or during the success animation/delay
+                        disabled={isAssessing || (showCoinAnimation && assessmentStatus === 'passed')}
+                    >
+                        <Ionicons name="arrow-back" size={28} color={(isAssessing || (showCoinAnimation && assessmentStatus === 'passed')) ? "#ccc" : "#444"} />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle} numberOfLines={1}>
+                        Stage {checkpoint.checkpointId}
+                    </Text>
+                    {/* Spacer for centering title */}
+                    <View style={{ width: 38 }} />
                 </View>
-            )}
+
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.contentContainer}
+                    keyboardShouldPersistTaps="handled" // Helps with tapping buttons while keyboard is up
+                >
+                    {/* --- Stage Content --- */}
+                    <Text style={styles.stageTitle}>{checkpoint.title}</Text>
+                    {checkpoint.creatorName && <Text style={styles.creatorText}>by {checkpoint.creatorName}</Text>}
+                    {videoId ? (
+                        <View style={styles.videoContainer}>
+                            <YoutubePlayer
+                                height={220}
+                                play={false} // Autoplay off
+                                videoId={videoId}
+                                webViewStyle={{ opacity: 0.99 }} // Required for some RN versions
+                                // Optional: Add error handling for the player
+                                // onError={(e) => console.error('Youtube Player Error:', e)}
+                            />
+                        </View>
+                    ) : (
+                        <View style={styles.videoPlaceholder}>
+                            <Ionicons name="play-circle-outline" size={60} color="#cccccc" />
+                            <Text style={styles.videoPlaceholderText}>(Video Not Available)</Text>
+                        </View>
+                    )}
+                    {checkpoint.description && <Text style={styles.descriptionText}>{checkpoint.description}</Text>}
+                    {checkpoint.outcomes && checkpoint.outcomes.length > 0 && (
+                        <View style={styles.outcomesContainer}>
+                            <Text style={styles.outcomesTitle}>Learning Outcomes:</Text>
+                            {checkpoint.outcomes.map((outcome, index) => (
+                                <View key={index} style={styles.outcomeItemContainer}>
+                                    <Text style={styles.outcomeBullet}>{'\u2022'}</Text>
+                                    <Text style={styles.outcomeText}>{outcome}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    )}
+
+                    {/* --- Assessment Section (Conditional Rendering) --- */}
+                    {!isAlreadyCompleted ? (
+                        <View style={styles.assessmentSection}>
+                            <Text style={styles.assessmentTitle}>Test Your Knowledge</Text>
+                            <Text style={styles.assessmentQuestion}>{assessmentQuestion}</Text>
+
+                            <TextInput
+                                style={styles.answerInput}
+                                placeholder="Type your answer here..."
+                                value={userAnswer}
+                                onChangeText={setUserAnswer}
+                                multiline
+                                // Disable input while assessment is in progress
+                                editable={!isAssessing}
+                                placeholderTextColor="#999"
+                                // Optional: Increase height based on content, up to a max
+                                // numberOfLines={4} // Suggest initial height
+                            />
+
+                            {/* Display Feedback and Score (conditionally) */}
+                            {assessmentFeedback && (
+                                <View style={[
+                                    styles.feedbackContainer,
+                                    // Apply dynamic styling based on pass/fail status
+                                    assessmentStatus === 'passed' ? styles.feedbackPassed : (assessmentStatus === 'failed' ? styles.feedbackFailed : styles.feedbackNeutral)
+                                ]}>
+                                    <Text style={styles.feedbackTitle}>Feedback:</Text>
+                                    <Text style={styles.feedbackText}>{assessmentFeedback}</Text>
+                                    {/* Only show score if it's a number */}
+                                    {typeof assessmentScore === 'number' && (
+                                        <Text style={styles.scoreText}>
+                                            Score: {assessmentScore} / 10
+                                        </Text>
+                                    )}
+                                </View>
+                            )}
+
+                            {/* Submit Button */}
+                             <TouchableOpacity
+                                style={[
+                                    styles.submitButton,
+                                    // Disable appearance if assessing or answer is empty
+                                    (isAssessing || !userAnswer.trim()) && styles.submitButtonDisabled
+                                ]}
+                                onPress={handleSubmitAnswer}
+                                disabled={isAssessing || !userAnswer.trim()} // Actual disable flag
+                            >
+                                {isAssessing ? (
+                                    <ActivityIndicator size="small" color="#ffffff" />
+                                ) : (
+                                    <Text style={styles.submitButtonText}>Submit Answer</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                         // --- Show Completed State ---
+                         <View style={styles.completedContainer}>
+                            <Ionicons name="checkmark-circle" size={50} color="#2ecc71" />
+                            <Text style={styles.completedText}>Stage Completed!</Text>
+                            {/* Optionally show the score achieved if available */}
+                            {/* You might need to fetch/store the score achieved previously */}
+                            {/* {assessmentScore !== null && (
+                                <Text style={styles.completedScoreText}>
+                                    (Score Achieved: {assessmentScore}/10)
+                                 </Text>
+                             )} */}
+                         </View>
+                    )}
+
+
+                    {/* Spacer at the bottom */}
+                    {/* <View style={{ height: 60 }} /> */}
+                </ScrollView>
+
+                {/* Coin Animation (only shows if passed and animation flag is true) */}
+                {showCoinAnimation && assessmentStatus === 'passed' && (
+                    <View style={styles.coinAnimationContainer}>
+                        <Text style={styles.coinAnimationText}>+{coinAmountAnimated} 🪙</Text>
+                    </View>
+                )}
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 };
 
-const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#FBF7F0',
-    },
-    scrollView: {
-        flex: 1,
-    },
-    contentContainer: {
-        paddingHorizontal: 15,
-        paddingBottom: 30,
-        alignItems: 'center',
-    },
-    header: {
-        borderRadius: 15,
-        borderWidth: 3,
-        borderColor: '#333333',
-        marginLeft: 10,
-        marginRight: 10,
-        marginTop: 35,
-        backgroundColor: '#ffffff',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 10,
-        paddingHorizontal: 15,
-    },
-    backButton: {
-        padding: 5,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#3C3633',
-        flexShrink: 1,
-        textAlign: 'center',
-    },
-    stageTitle: {
-        fontSize: 26,
-        fontWeight: 'bold',
-        color: '#3C3633',
-        marginTop: 25,
-        marginBottom: 8,
-        textAlign: 'center',
-    },
-    creatorText: {
-        fontSize: 14,
-        color: '#777',
-        marginBottom: 25,
-    },
-    videoContainer: {
-        width: '100%',
-        aspectRatio: 16 / 9,
-        borderRadius: 8,
-        marginBottom: 20,
-        overflow: 'hidden',
-    },
-    videoPlaceholder: {
-        width: '100%',
-        aspectRatio: 16 / 9,
-        backgroundColor: '#EFEAE4',
-        borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: '#EAE0D5',
-    },
-    videoPlaceholderText: {
-        marginTop: 5,
-        fontSize: 14,
-        color: '#a0a0a0',
-    },
-    descriptionText: {
-        fontSize: 16,
-        color: '#555',
-        textAlign: 'left',
-        lineHeight: 23,
-        marginBottom: 25,
-        width: '100%',
-    },
-    outcomesContainer: {
-        width: '100%',
-        padding: 15,
-        backgroundColor: '#EFEAE4',
-        borderRadius: 8,
-        marginBottom: 10,
-        borderWidth: 1,
-        borderColor: '#EAE0D5',
-    },
-    outcomesTitle: {
-        fontSize: 17,
-        fontWeight: '600',
-        color: '#3C3633',
-        marginBottom: 12,
-    },
-    outcomeItemContainer: {
-        flexDirection: 'row',
-        marginBottom: 8,
-        alignItems: 'flex-start',
-    },
-    outcomeBullet: {
-        fontSize: 16,
-        color: '#3C3633',
-        marginRight: 8,
-        lineHeight: 22,
-    },
-    outcomeText: {
-        fontSize: 15,
-        color: '#444',
-        lineHeight: 22,
-        flex: 1,
-    },
-    completeButton: {
-        backgroundColor: '#5E8B7E',
-        paddingVertical: 14,
-        paddingHorizontal: 40,
-        borderRadius: 15,
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '100%',
-        minHeight: 50,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 4,
-        elevation: 4,
-    },
-    completeButtonDisabled: {
-        backgroundColor: '#a9c7bf',
-    },
-    completeButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    coinAnimationContainer: {
-        position: 'absolute',
-        bottom: 80,
-        alignSelf: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        borderRadius: 20,
-        paddingVertical: 8,
-        paddingHorizontal: 15,
-        zIndex: 100,
-    },
-    coinAnimationText: {
-        color: '#FFD700',
-        fontSize: 18,
-        fontWeight: 'bold',
-    }
-});
+
 
 export default StagePage;

@@ -15,7 +15,7 @@ const ReportPage = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FBF7F0',
+    backgroundColor: '#ffffff',
   },
   container: {
     flex: 1,

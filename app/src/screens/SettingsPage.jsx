@@ -91,14 +91,14 @@ const SettingsPage = ({ navigation }) => {
 const styles = StyleSheet.create({
     AboutText:{
         fontSize: 10,
-        color: '#545454',
+        color: '#3333333',
         textAlign: 'center',
         marginTop: 10,
         marginBottom:10
     },
     safeArea: {
         flex: 1,
-        backgroundColor: '#FBF7F0',
+        backgroundColor: '#ffffff',
     },
     container: {
         flex: 1,

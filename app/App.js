@@ -13,6 +13,7 @@ import SettingsPage from './src/screens/SettingsPage.jsx';
 import ReportPage from './src/screens/ReportPage.jsx';   // Import new screen
 import ProfilePage from './src/screens/ProfilePage.jsx'; // Import new screen
 import PersonalTrackPage from './src/screens/PersonalTrackPage.jsx'
+import FlashcardPage from './src/screens/FlashcardPage.jsx';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator(); // Create Tab navigator instance
@@ -25,10 +26,10 @@ function HomeStackNavigator() {
         cardStyleInterpolator: ({ current, layouts }) => {
           return {
             cardStyle: {
-              backgroundColor: '#FBF7F0',
+              backgroundColor: '#ffffff',
               transform: [
                 {
-                    translateX: current.progress.interpolate({
+                  translateX: current.progress.interpolate({
                     inputRange: [0, 1],
                     outputRange: [layouts.screen.width, 0],
                   }),
@@ -44,6 +45,11 @@ function HomeStackNavigator() {
       <Stack.Screen name="StagePage" component={StagePage} />
       <Stack.Screen name="SettingsPage" component={SettingsPage} />
       <Stack.Screen name="PersonalTrackPage" component={PersonalTrackPage} />
+      <Stack.Screen
+        name="FlashcardPage"
+        component={FlashcardPage}
+        options={{ headerShown: false }} // Or customize header as needed
+      />
     </Stack.Navigator>
   );
 }
@@ -68,14 +74,14 @@ export default function App() {
 
             return <Ionicons name={iconName} size={size} color={color} />;
           },
-          
+
           tabBarActiveTintColor: '#000000',
           tabBarInactiveTintColor: 'gray',
           tabBarStyle: {
             paddingTop: 3,
-            borderTopWidth: 2,
-            borderColor: '#333333',
-            backgroundColor: '#ffffff',
+            borderTopEndRadius: 25,
+            borderTopStartRadius: 25,
+            backgroundColor: '#ededed',
             paddingBottom: 5,
             height: 40,
           },

@@ -20,7 +20,9 @@ import {
 } from '../utils/storage';
 
 
-const API_BASE_URL = 'https://courseitbackend.vercel.app'; 
+// const API_BASE_URL = 'https://courseitbackend.vercel.app'; 
+const API_BASE_URL ='https://courseitbackend.vercel.app';
+// const API_BASE_URL = 'http://127.0.0.1:5000'
 const TRACK_CREATION_COST = 30; 
 const PVT_KEY = 'aniketvm1104'   // This will be replaced when user signin signup works with token
 
@@ -286,11 +288,14 @@ const PersonalTrackPage = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FBF7F0',
+    backgroundColor: '#ffffff',
   },
   container: {
     flex: 1,
-    padding: 20,
+    paddingRight: 10,
+    paddingLeft: 10,
+    paddingBottom: 10,
+    paddingTop: 20,
   },
   header: {
     borderRadius: 15,
@@ -302,7 +307,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
     paddingVertical: 10,
-    paddingHorizontal: 15,
+    paddingHorizontal: 10,
     justifyContent: 'space-between', // To space out title and coins
   },
   backButton: {

@@ -1,3 +1,4 @@
+// TrackPage.jsx
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
     View,
@@ -13,15 +14,14 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import { useFocusEffect } from '@react-navigation/native';
-
 import { loadUserCoins, saveUserProgress, loadUserProgress, getTrackById } from "../utils/storage";
 
 // --- Constants (keep or adjust as needed) ---
-const CHECKPOINT_HEIGHT_ESTIMATE = 80; 
-const CHECKPOINT_VERTICAL_MARGIN = 40; 
+const CHECKPOINT_HEIGHT_ESTIMATE = 80;
+const CHECKPOINT_VERTICAL_MARGIN = 40;
 const HORIZONTAL_PADDING = 20;
 const CHECKPOINT_AREA_WIDTH_PERCENT = 45;
-const SCROLL_OFFSET = 100; 
+const SCROLL_OFFSET = 100;
 
 const TrackPage = ({ route, navigation }) => {
     const { trackId, completedCheckpoints: initialCompletedCheckpoints } = route.params || {};
@@ -34,6 +34,8 @@ const TrackPage = ({ route, navigation }) => {
 
     const [track, setTrack] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+
+    // --- Load Track Data (useEffect) --- remains the same
 
     useEffect(() => {
         async function loadTrackData() {
@@ -51,6 +53,8 @@ const TrackPage = ({ route, navigation }) => {
 
                 if (trackData) {
                     console.log(`TrackPage: Successfully loaded track: ${trackData.title}`);
+                    // Add a check for flashcards existence
+                    console.log(`TrackPage: Track has ${trackData.flashcards?.length ?? 0} flashcards.`);
                     setTrack(trackData);
                 } else {
                     console.warn(`TrackPage: Track with ID ${trackId} not found!`);
@@ -67,17 +71,19 @@ const TrackPage = ({ route, navigation }) => {
         loadTrackData();
     }, [trackId]);
 
+
     // Calculate reversed checkpoints and total count when track changes
     const reversedCheckpoints = track?.checkpoints ? [...track.checkpoints].reverse() : [];
     const totalCheckpoints = track?.checkpoints?.length || 0;
+    const hasFlashcards = track?.flashcards && track.flashcards.length > 0; // Check if flashcards exist
 
-    // Calculate estimated content height
+    // --- estimatedContentHeight Calculation --- remains the same
     const estimatedContentHeight =
         reversedCheckpoints.length * (CHECKPOINT_HEIGHT_ESTIMATE + CHECKPOINT_VERTICAL_MARGIN) +
-        CHECKPOINT_VERTICAL_MARGIN; // Add margin for the first item too
+        CHECKPOINT_VERTICAL_MARGIN;
 
-    // Calculate path points
-    const pathPoints = useMemo(() => {
+    // --- pathPoints Calculation (useMemo) --- remains the same
+     const pathPoints = useMemo(() => {
         const points = [];
         const checkpointAreaWidth = windowWidth * (CHECKPOINT_AREA_WIDTH_PERCENT / 100);
         const availableSpace = windowWidth - 2 * HORIZONTAL_PADDING;
@@ -104,8 +110,9 @@ const TrackPage = ({ route, navigation }) => {
         return points;
     }, [reversedCheckpoints, windowWidth]);
 
-    // Progress saving function
-    const saveProgressLocal = async (newProgressCount) => {
+
+    // --- saveProgressLocal Function --- remains the same
+     const saveProgressLocal = async (newProgressCount) => {
         if (!trackId) return;
         try {
             console.log(`TrackPage: Saving progress for ${trackId}. New count: ${newProgressCount}`);
@@ -121,7 +128,8 @@ const TrackPage = ({ route, navigation }) => {
         }
     };
 
-    // Focus effect for coins and progress
+
+    // --- Focus effect for coins and progress --- remains the same
     useFocusEffect(
         React.useCallback(() => {
             let isActive = true;
@@ -139,12 +147,10 @@ const TrackPage = ({ route, navigation }) => {
                     if (isActive) {
                         setCoins(loadedCoins);
                         const newProgress = progress[trackId] || 0;
-                        // Only update state if the value actually changes to prevent unnecessary re-renders
                         if (newProgress !== currentProgress) {
-                             console.log(`TrackPage: Progress updated externally for ${trackId} from ${currentProgress} to ${newProgress}`);
-                             setCurrentProgress(newProgress);
-                             // Reset initial scroll flag if progress changes externally, allowing scroll to new 'next'
-                             setDidInitialScroll(false);
+                            console.log(`TrackPage: Progress updated externally for ${trackId} from ${currentProgress} to ${newProgress}`);
+                            setCurrentProgress(newProgress);
+                            setDidInitialScroll(false);
                         } else {
                             console.log(`TrackPage: Progress for ${trackId} hasn't changed externally (${newProgress}).`);
                         }
@@ -163,8 +169,9 @@ const TrackPage = ({ route, navigation }) => {
         }, [trackId, currentProgress]) // Depend on currentProgress to refetch if it changes internally
     );
 
-    // Effect for handling completed stages coming back from StagePage
-     useEffect(() => {
+
+    // --- Effect for handling completed stages --- remains the same
+    useEffect(() => {
         // Ensure we have the necessary data and the params are for *this* track
         if (!track || !track.checkpoints || !route.params?.completedStageId || route.params?.trackId !== trackId) {
             return;
@@ -173,7 +180,6 @@ const TrackPage = ({ route, navigation }) => {
         console.log("TrackPage: Completion effect - Checking route.params:", route.params);
         const completedCheckpointId = route.params.completedStageId;
 
-        // Find the original index (0-based) of the completed checkpoint in the non-reversed array
         const completedOriginalIndex = track.checkpoints.findIndex(
             (cp) => cp.checkpointId.toString() === completedCheckpointId.toString()
         );
@@ -181,12 +187,10 @@ const TrackPage = ({ route, navigation }) => {
 
         if (completedOriginalIndex === -1) {
             console.warn(`TrackPage: Completed checkpoint ID ${completedCheckpointId} not found in track ${trackId}.`);
-             // Clean up the parameter even if not found
             navigation.setParams({ completedStageId: null, trackId: null });
             return;
         }
 
-        // Check if this completion corresponds to the *expected next* stage
         const expectedCompletedIndex = currentProgress;
         console.log(`TrackPage: Completion effect - Expected index for next completion: ${expectedCompletedIndex}`);
 
@@ -196,8 +200,6 @@ const TrackPage = ({ route, navigation }) => {
             setCurrentProgress(newProgressCount); // Update UI immediately
             saveProgressLocal(newProgressCount); // Save persistently
 
-            // Scroll to the *new* next checkpoint (if it exists)
-            // Use a timeout to allow layout updates and state propagation
             setTimeout(() => {
                 const nextOriginalIndex = newProgressCount;
                 if (nextOriginalIndex < totalCheckpoints) {
@@ -215,105 +217,107 @@ const TrackPage = ({ route, navigation }) => {
                     }
                 } else {
                     console.log("TrackPage: All checkpoints completed after this one. No next checkpoint to scroll to.");
-                    // Optionally scroll to the last completed item or top/bottom
                 }
-            }, 400); // Increased timeout slightly
+            }, 400);
         } else {
             console.log(`TrackPage: Completion effect - Completed stage index (${completedOriginalIndex}) does not match expected (${expectedCompletedIndex}). Likely a revisit or out-of-order completion. No progress update.`);
         }
 
-        // Clean up the parameter regardless of whether progress was updated, to avoid re-triggering
         console.log("TrackPage: Completion effect - Clearing completedStageId/trackId params.");
         navigation.setParams({ completedStageId: null, trackId: null });
 
-    }, [route.params?.completedStageId, route.params?.trackId, trackId, currentProgress, track, checkpointLayouts, navigation, totalCheckpoints]); // Added totalCheckpoints dependency
+    }, [route.params?.completedStageId, route.params?.trackId, trackId, currentProgress, track, checkpointLayouts, navigation, totalCheckpoints]);
 
 
-    // Checkpoint press handler - *** MODIFIED ***
-    const handleCheckpointPress = (checkpoint, originalIndex, isPressableFlag) => {
-        // Use the pre-calculated pressable flag
+    // --- handleCheckpointPress Function --- remains the same
+     const handleCheckpointPress = (checkpoint, originalIndex, isPressableFlag) => {
         if (!isPressableFlag) {
             console.log(`TrackPage: Click prevented on locked checkpoint: ${checkpoint.checkpointId} (index ${originalIndex})`);
-            return; // Exit if not pressable
+            return;
         }
 
-        const isRevisit = originalIndex < currentProgress; // Check if it's a completed one being revisited
+        const isRevisit = originalIndex < currentProgress;
         console.log(`TrackPage: Navigating to StagePage for checkpoint ID: ${checkpoint.checkpointId} (index ${originalIndex}) - Revisit: ${isRevisit}`);
         navigation.navigate("StagePage", {
             trackId: trackId,
             checkpoint: checkpoint,
-            isRevisit: isRevisit, // Optionally pass this info to StagePage
+            isRevisit: isRevisit,
         });
     };
 
-    // Initial scroll to next checkpoint
+
+    // --- Initial scroll effect --- remains the same
     useEffect(() => {
-        // Conditions: track loaded, has checkpoints, initial scroll not done, and layouts are ready
         if (track && totalCheckpoints > 0 && !didInitialScroll && Object.keys(checkpointLayouts).length >= totalCheckpoints) {
             const nextOriginalIndex = currentProgress;
 
-            // Only scroll if there *is* a next checkpoint
             if (nextOriginalIndex < totalCheckpoints) {
-                const layoutKey = nextOriginalIndex; // Key corresponds to original index
+                const layoutKey = nextOriginalIndex;
                 const layout = checkpointLayouts[layoutKey];
                 console.log(`TrackPage: Initial scroll check. Target index: ${nextOriginalIndex}, Layout found:`, !!layout);
 
                 if (layout && scrollViewRef.current) {
-                     // Use timeout to ensure layout is fully stable after potentially rapid updates
                     setTimeout(() => {
-                        if (scrollViewRef.current) { // Check ref again inside timeout
+                        if (scrollViewRef.current) {
                             const targetY = Math.max(0, layout.y - SCROLL_OFFSET);
                             console.log(`TrackPage: Performing initial scroll to y=${layout.y}, targetY=${targetY}`);
                             scrollViewRef.current.scrollTo({ y: targetY, animated: true });
                             setDidInitialScroll(true);
                         }
-                    }, 500); // Slightly longer timeout for stability
+                    }, 500);
                 } else if (Object.keys(checkpointLayouts).length >= totalCheckpoints) {
-                     // If all layouts are supposedly registered but the target isn't found, log a warning.
-                     // This might happen if layout calculation or state update timing is off.
                     console.warn(`TrackPage: Initial scroll target layout (index ${layoutKey}) not found even though ${Object.keys(checkpointLayouts).length}/${totalCheckpoints} layouts seem registered. Layouts:`, checkpointLayouts);
-                     // Consider setting didInitialScroll to true anyway to prevent repeated checks if layout consistently fails
-                     // setDidInitialScroll(true);
                 }
             } else {
-                // All checkpoints are completed, no 'next' one to scroll to.
                 console.log("TrackPage: All checkpoints completed, no initial scroll needed.");
-                setDidInitialScroll(true); // Mark as done
-                // Optionally scroll to the bottom or top
-                 setTimeout(() => {
-                     if (scrollViewRef.current) {
-                         scrollViewRef.current.scrollToEnd({ animated: true });
-                     }
-                 }, 500);
+                setDidInitialScroll(true);
+                setTimeout(() => {
+                    if (scrollViewRef.current) {
+                        scrollViewRef.current.scrollToEnd({ animated: true });
+                    }
+                }, 500);
             }
         }
     }, [track, totalCheckpoints, currentProgress, didInitialScroll, checkpointLayouts]);
 
-    // Reset scroll/layouts when track changes or initial progress changes significantly
+
+    // --- Reset scroll/layouts effect --- remains the same
     useEffect(() => {
         console.log(`TrackPage: trackId or initialCompletedCheckpoints changed to ${trackId}, ${initialCompletedCheckpoints}. Resetting state.`);
-        // Reset flags and layout data for the new track/progress context
         setDidInitialScroll(false);
         setCheckpointLayouts({});
-        // Ensure currentProgress reflects the initial value passed in props
         setCurrentProgress(initialCompletedCheckpoints || 0);
-         // Scroll to top when track changes
-         if (scrollViewRef.current) {
+        if (scrollViewRef.current) {
             scrollViewRef.current.scrollTo({ y: 0, animated: false });
         }
-    }, [trackId, initialCompletedCheckpoints]); // Rerun only when these specific props change
+    }, [trackId, initialCompletedCheckpoints]);
+
+
+    // --- NEW: Flashcard Navigation Handler ---
+    const handleFlashcardPress = () => {
+        if (!trackId || !hasFlashcards) {
+             Alert.alert("No Flashcards", "Flashcards are not available for this track yet.");
+             return;
+        }
+        console.log(`TrackPage: Navigating to FlashcardPage for trackId: ${trackId}`);
+        navigation.navigate('FlashcardPage', { trackId: trackId });
+    };
+    // --- END NEW ---
 
 
     // --- Render Logic ---
 
     if (isLoading) {
+        // --- Loading State --- remains the same
         return (
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>
-                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                         <Ionicons name="arrow-back" size={28} color="#333" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Loading Track...</Text>
+                     {/* Placeholder for icons area */}
+                    <View style={{ width: 60 }} />
                 </View>
                 <View style={[styles.container, styles.centered]}>
                     <ActivityIndicator size="large" color="#3498db" />
@@ -323,31 +327,35 @@ const TrackPage = ({ route, navigation }) => {
     }
 
     if (!track) {
+        // --- Error State / Track Not Found --- remains the same
         return (
-            <SafeAreaView style={styles.safeArea}>
+             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                         <Ionicons name="arrow-back" size={28} color="#333" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Error</Text>
+                     {/* Placeholder for icons area */}
+                    <View style={{ width: 60 }} />
                 </View>
                 <View style={[styles.container, styles.centered]}>
                     <Text style={styles.errorText}>Track not found or could not be loaded.</Text>
-                     <TouchableOpacity
+                    <TouchableOpacity
                         style={styles.retryButton}
-                        onPress={() => navigation.goBack()} // Or implement a retry mechanism
+                        onPress={() => navigation.goBack()}
                     >
                         <Text style={styles.retryButtonText}>Go Back</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
         );
+
     }
 
     // --- Main Track View ---
     return (
         <SafeAreaView style={styles.safeArea}>
-            {/* Header */}
+            {/* Header - MODIFIED */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={28} color="#333" />
@@ -358,16 +366,27 @@ const TrackPage = ({ route, navigation }) => {
                         <Text style={styles.headerProgress}>{currentProgress} / {totalCheckpoints}</Text>
                     )}
                 </View>
+                {/* Icons container */}
                 <View style={styles.headerIcons}>
+                     {/* Flashcard Button - Only show if flashcards exist */}
+
+                    {/* Coin Display */}
                     <View style={styles.iconContainer}>
-                        <Ionicons name="server" size={22} color="#FFD700" />
+                        <Ionicons name="server" size={22} color="#ffdd00" />
                         <Text style={styles.iconText}>{coins}</Text>
                     </View>
-                    {/* Add other icons if needed */}
                 </View>
             </View>
 
+            <View style={styles.flashcardContainer}>
+            {hasFlashcards && (
+                         <TouchableOpacity onPress={handleFlashcardPress} >
+                            <Ionicons name="layers-outline" size={26} color="#3498db" />
+                        </TouchableOpacity>
+                    )}
+            </View>
             {/* Track Content */}
+            {/* ScrollView, SVG Path, Checkpoint Cards - NO CHANGES needed here */}
             <View style={styles.trackContainer}>
                 {totalCheckpoints > 0 ? (
                     <ScrollView
@@ -375,51 +394,29 @@ const TrackPage = ({ route, navigation }) => {
                         style={styles.trackScrollView}
                         contentContainerStyle={[
                             styles.trackContentContainer,
-                            // Ensure content height is at least window height for scrolling, but uses estimated if larger
-                            { height: Math.max(estimatedContentHeight, windowHeight - (styles.header.height || 60)) } // Adjust for header height
+                            { height: Math.max(estimatedContentHeight, windowHeight - 60) } // Adjust approx header height
                         ]}
                         showsVerticalScrollIndicator={false}
-                        // onScroll={(e) => console.log("Scroll Y:", e.nativeEvent.contentOffset.y)} // Debug scroll position
-                        // scrollEventThrottle={16} // Optional: Adjust scroll event frequency
                     >
                         {/* SVG Path */}
                         <View style={styles.svgContainer} pointerEvents="none">
-                            {/* Ensure SVG height matches content height */}
                             <Svg height={Math.max(estimatedContentHeight, 1)} width={windowWidth}>
                                 {pathPoints.map((point, index) => {
-                                    if (index === 0) return null; // No path segment before the first point
+                                    if (index === 0) return null;
                                     const prevPoint = pathPoints[index - 1];
-
-                                    // Basic validation for points
                                     if (!prevPoint || typeof prevPoint.x !== 'number' || typeof prevPoint.y !== 'number' ||
                                         typeof point.x !== 'number' || typeof point.y !== 'number' ||
                                         isNaN(prevPoint.x) || isNaN(prevPoint.y) || isNaN(point.x) || isNaN(point.y)) {
                                         console.warn("Skipping path segment due to invalid points", { prevPoint, point, index });
                                         return null;
                                     }
-
-                                    // Determine segment completion: The segment leads TO the checkpoint at 'point' (index in reversed array)
-                                    // The original index of the checkpoint this segment leads TO is:
                                     const segmentEndOriginalIndex = totalCheckpoints - 1 - index;
-                                    // The segment is completed if the checkpoint it leads TO is completed
                                     const isSegmentCompleted = segmentEndOriginalIndex < currentProgress;
-
-                                    const pathColor = isSegmentCompleted ? "#3498db" : "#cccccc"; // Blue if completed, gray otherwise
-                                    const controlXOffset = 30 * (index % 2 === 0 ? 1 : -1); // Curve offset based on alignment
-                                    const controlY = (prevPoint.y + point.y) / 2; // Midpoint Y for curve control
-
+                                    const pathColor = isSegmentCompleted ? "#3498db" : "#cccccc";
+                                    const controlXOffset = 30 * (index % 2 === 0 ? 1 : -1);
+                                    const controlY = (prevPoint.y + point.y) / 2;
                                     const pathData = `M${prevPoint.x},${prevPoint.y} Q${prevPoint.x + controlXOffset},${controlY} ${point.x},${point.y}`;
-
-                                    return (
-                                        <Path
-                                            key={`path-${index}`}
-                                            d={pathData}
-                                            stroke={pathColor}
-                                            strokeWidth="5"
-                                            fill="none"
-                                            strokeLinecap="round"
-                                        />
-                                    );
+                                    return ( <Path key={`path-${index}`} d={pathData} stroke={pathColor} strokeWidth="5" fill="none" strokeLinecap="round" /> );
                                 })}
                             </Svg>
                         </View>
@@ -429,7 +426,6 @@ const TrackPage = ({ route, navigation }) => {
                             const originalIndex = totalCheckpoints - 1 - index;
                             const isCompleted = originalIndex < currentProgress;
                             const isNext = originalIndex === currentProgress;
-                            // *** NEW LOGIC: Pressable if completed OR next ***
                             const isPressable = isCompleted || isNext;
 
                             let checkpointStyle = styles.checkpointLocked;
@@ -440,18 +436,16 @@ const TrackPage = ({ route, navigation }) => {
                             if (isCompleted) {
                                 checkpointStyle = styles.checkpointCompleted;
                                 textStyle = styles.checkpointTextCompleted;
-                                iconName = "checkmark-circle"; // Checkmark for completed
-                                iconColor = "#2ecc71"; // Green for completed
+                                iconName = "checkmark-circle";
+                                iconColor = "#2ecc71";
                             } else if (isNext) {
                                 checkpointStyle = styles.checkpointNext;
                                 textStyle = styles.checkpointTextNext;
-                                iconName = "play-circle"; // Play icon for next
-                                iconColor = "#ffffff"; // White icon on blue background
-                                // Apply specific styles for 'next' directly if needed
+                                iconName = "play-circle";
+                                iconColor = "#ffffff";
                                 checkpointStyle = {...checkpointStyle, backgroundColor: '#3498db'};
                                 textStyle = {...textStyle, color: '#ffffff', fontWeight: '600'};
                             }
-                            // Locked state uses defaults defined above
 
                             const isAlignedLeft = index % 2 !== 0;
                             const cardContainerStyle = [
@@ -466,37 +460,20 @@ const TrackPage = ({ route, navigation }) => {
                                     style={cardContainerStyle}
                                     onLayout={(event) => {
                                         const layout = event.nativeEvent.layout;
-                                        const layoutKey = originalIndex; // Use original index as the key
-                                         // Update layout only if it's new or significantly changed
+                                        const layoutKey = originalIndex;
                                         if (!checkpointLayouts[layoutKey] || Math.abs((checkpointLayouts[layoutKey]?.y || 0) - layout.y) > 1) {
-                                           // console.log(`Layout update for index ${originalIndex} (key ${layoutKey}): y=${layout.y}`);
-                                            setCheckpointLayouts((prev) => ({
-                                                ...prev,
-                                                [layoutKey]: { y: layout.y, height: layout.height },
-                                            }));
+                                            setCheckpointLayouts((prev) => ({ ...prev, [layoutKey]: { y: layout.y, height: layout.height } }));
                                         }
                                     }}
                                 >
                                     <TouchableOpacity
                                         style={[styles.checkpointBase, checkpointStyle]}
-                                        // *** Pass isPressable to handler ***
                                         onPress={() => handleCheckpointPress(checkpoint, originalIndex, isPressable)}
-                                        // *** Disable based on isPressable ***
                                         disabled={!isPressable}
-                                        // *** Adjust opacity based on isPressable ***
                                         activeOpacity={isPressable ? 0.7 : 1.0}
                                     >
-                                        <Ionicons
-                                            name={iconName}
-                                            size={24}
-                                            color={iconColor}
-                                            style={styles.checkpointIcon}
-                                        />
-                                        <Text
-                                            style={[styles.checkpointTextBase, textStyle]}
-                                            numberOfLines={2} // Allow slightly more text
-                                        >
-                                            {/* Use checkpoint title or default */}
+                                        <Ionicons name={iconName} size={24} color={iconColor} style={styles.checkpointIcon} />
+                                        <Text style={[styles.checkpointTextBase, textStyle]} numberOfLines={2} >
                                             {checkpoint.title || `Stage ${originalIndex + 1}`}
                                         </Text>
                                     </TouchableOpacity>
@@ -505,49 +482,93 @@ const TrackPage = ({ route, navigation }) => {
                         })}
                     </ScrollView>
                 ) : (
-                    // Message when track has no checkpoints
                     <View style={[styles.container, styles.centered]}>
                         <Text style={styles.infoText}>This track doesn't have any stages yet.</Text>
                     </View>
                 )}
             </View>
+
         </SafeAreaView>
     );
 };
 
+// --- Styles --- (Add/Modify styles for header icons)
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: "#FBF7F0" },
-    container: { flex: 1, justifyContent: "center", alignItems: "center" }, // Added container style
-    notFoundText: { fontSize: 18, color: "#e74c3c", marginLeft: 15 }, // Kept style
+    flashcardContainer: {
+        position: "absolute",
+        top: 110,
+        left: 10,
+        zIndex: 1,
+        borderColor: '#4a4a4a',
+        borderWidth: 0,
+        backgroundColor: "#eeeeee",
+        borderRadius: 10,
+        padding: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 1, height: 1 },
+        shadowOpacity: 0.4,
+    },
+    safeArea: { flex: 1, backgroundColor: "#ffffff" },
+    container: { flex: 1, justifyContent: "center", alignItems: "center" },
+    centered: { // Added for centering loading/error/empty states
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    errorText: { // Style for error messages
+        fontSize: 16,
+        color: '#c0392b',
+        textAlign: 'center',
+        marginBottom: 15,
+    },
+    retryButton: { // Style for retry/go back buttons
+         backgroundColor: '#3498db',
+         paddingVertical: 10,
+         paddingHorizontal: 20,
+         borderRadius: 5,
+    },
+    retryButtonText: {
+         color: '#ffffff',
+         fontSize: 16,
+         fontWeight: '500',
+    },
+    infoText: { // Style for informational text like "no stages"
+        fontSize: 16,
+        color: '#555',
+        textAlign: 'center',
+    },
+    notFoundText: { fontSize: 18, color: "#e74c3c", marginLeft: 15 },
 
     header: {
-        borderRadius: 15,
-        borderWidth: 3,
-        borderColor: '#333333',
-        marginLeft: 10,
-        marginRight: 10,
-        marginTop: 35,
-        backgroundColor: '#ffffff',
+        // borderRadius: 15,
+        // borderWidth: 3,
+        // borderColor: '#333333',
+        // marginLeft: 10,
+        // marginRight: 10,
+        // marginTop: 35,
+        padding: 10,
+        borderBottomWidth: 1,
+        backgroundColor: '#ededed',
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 10,
-        paddingHorizontal: 15,
+        justifyContent: 'space-between', // Space items out
+        minHeight: 100, // Ensure minimum header height
     },
 
-    backButton: { padding: 5 },
+    backButton: { padding: 5, marginTop:20 }, // Keep padding for touch area
 
     headerTitleContainer: {
-        flexShrink: 1,
-        flexGrow: 1,
+        marginTop:30,
+        flex: 1, // Allow title container to take up space
         alignItems: 'center',
-        marginHorizontal: 8
+        marginHorizontal: 0, // Add some horizontal margin
     },
 
     headerTitle: {
         fontSize: 17,
         fontWeight: "600",
-        color: "#333",
+        color: "#33333",
         textAlign: "center",
     },
     headerProgress: {
@@ -557,12 +578,35 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
 
-    headerIcons: { flexDirection: "row", alignItems: "center" },
+    // Container for all icons on the right
+    headerIcons: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: 'flex-end', // Align icons to the right
+        minWidth: 60, // Ensure space for icons even if title is long
+    },
 
-    iconContainer: { flexDirection: "row", alignItems: "center", marginLeft: 12 },
+    // Style for individual icon buttons like flashcards
+    iconButton: {
+         padding: 5, // Touch area
+         marginLeft: 10, // Space from previous item (or edge)
+    },
+
+    // Style for icon+text pairs like coins
+    iconContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginLeft: 10, // Space from flashcard button or edge
+        marginRight: 10, // Space from edge
+        padding: 5, // Touch area
+        borderRadius: 0,
+        marginTop: 30,
+    },
 
     iconText: { marginLeft: 4, fontSize: 14, fontWeight: "500", color: "#444" },
-    trackContainer: { flex: 1, backgroundColor: '#FBF7F0' },
+
+    // --- Rest of the styles remain the same ---
+    trackContainer: { flex: 1, backgroundColor: '#ffffff' },
     trackScrollView: { flex: 1 },
     trackContentContainer: {
         paddingVertical: CHECKPOINT_VERTICAL_MARGIN / 2, // Adjusted padding
@@ -581,10 +625,8 @@ const styles = StyleSheet.create({
     checkpointCardContainer: {
         position: 'absolute', // Use absolute positioning for cards
         width: `${CHECKPOINT_AREA_WIDTH_PERCENT}%`,
-        // marginBottom is removed as positioning is absolute
         zIndex: 1, // Cards above path
     },
-    // Adjusted alignLeft/Right to use left/right properties with absolute positioning
     alignLeft: { left: HORIZONTAL_PADDING },
     alignRight: { right: HORIZONTAL_PADDING },
     checkpointBase: {
@@ -609,7 +651,7 @@ const styles = StyleSheet.create({
     checkpointIcon: { marginRight: 8 },
     checkpointTextBase: { fontSize: 14, fontWeight: "600", flexShrink: 1 },
     checkpointTextLocked: { color: "#adb5bd" },
-    checkpointTextNext: { color: "#3498db" /* Color changes inline for blue bg */ },
+    checkpointTextNext: { color: "#ffffff" /* Color changes inline for blue bg */ }, // Adjusted color for blue background
     checkpointTextCompleted: { color: "#146c43" },
 });
 // --- End Styles ---

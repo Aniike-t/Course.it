@@ -252,7 +252,7 @@ const ProfilePage = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FBF7F0',
+    backgroundColor: '#ffffff',
   },
   container: {
     flex: 1,
@@ -271,23 +271,23 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 10,
+    marginBottom: 20,
     marginTop: 15,
     textAlign: 'left',
   },
   section: {
-    borderWidth: 3,
+    // borderWidth: 3,
     borderRadius: 12,
-    borderColor: '#2c2c2c',
+    borderColor: '#333333',
     marginBottom: 15,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#ededed',
     borderRadius: 12,
     padding: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 3,
+    // shadowColor: "#000",
+    // shadowOffset: { width: 0, height: 1 },
+    // shadowOpacity: 0.15,
+    // shadowRadius: 3,
+    // elevation: 3,
   },
   sectionTitle: {
     fontSize: 20,
@@ -304,9 +304,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around', // Distribute boxes
   },
   statBox: {
-    borderWidth: 3,
+    // borderWidth: 3,
+    backgroundColor: '#ffffff',
     borderRadius: 12,
-    borderColor: '#4a4a4a',
+    borderColor: '#333333',
     alignItems: 'center',
     width: '45%',
     marginBottom: 20,
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
    milestoneBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ecf0f1',
+    backgroundColor: '#ffffff',
     borderRadius: 8,
     padding: 15,
     marginBottom: 15, // Space between milestone boxes
