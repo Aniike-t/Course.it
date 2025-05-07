@@ -22,9 +22,12 @@ import {
 
 // const API_BASE_URL = 'https://courseitbackend.vercel.app'; 
 const API_BASE_URL ='https://courseitbackend.vercel.app';
+const PVT_KEY = 'aniketvm1104' 
+{/* API will be transferred to env and session tokens will be added here rather than a key*/}
+
 // const API_BASE_URL = 'http://127.0.0.1:5000'
 const TRACK_CREATION_COST = 30; 
-const PVT_KEY = 'aniketvm1104'   // This will be replaced when user signin signup works with token
+  // This will be replaced when user signin signup works with token
 
 const PersonalTrackPage = ({ navigation }) => {
   const [trackName, setTrackName] = useState('');

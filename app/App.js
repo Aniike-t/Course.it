@@ -45,11 +45,8 @@ function HomeStackNavigator() {
       <Stack.Screen name="StagePage" component={StagePage} />
       <Stack.Screen name="SettingsPage" component={SettingsPage} />
       <Stack.Screen name="PersonalTrackPage" component={PersonalTrackPage} />
-      <Stack.Screen
-        name="FlashcardPage"
-        component={FlashcardPage}
-        options={{ headerShown: false }} // Or customize header as needed
-      />
+      <Stack.Screen name="FlashcardPage" component={FlashcardPage} />
+      {/* Login and signup pages will be added later */}
     </Stack.Navigator>
   );
 }
