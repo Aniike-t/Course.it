@@ -4,6 +4,10 @@
 
 This application provides a gamified learning experience where users can follow predefined or create their own learning tracks. Users progress through checkpoints, watch associated videos, earn coins, maintain streaks, and unlock achievements and milestones. The backend is built with Python Flask and uses MongoDB, while the frontend is a React Native mobile application.
 
+## DEMO
+
+![Video](ProjectAssets/v3demo.mp4)
+
 ## Features
 
 * **Learning Tracks**: Browse and follow predefined learning paths on various topics (e.g., Chess, Guitar, Poker).
