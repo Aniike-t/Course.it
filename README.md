@@ -6,7 +6,7 @@ This application provides a gamified learning experience where users can follow 
 
 ## DEMO
 
-![Video](ProjectAssets/v3demo.mp4)
+https://github.com/user-attachments/assets/c18b7be5-d23c-488c-9e25-5e80d35d1f01
 
 ## Features
 
